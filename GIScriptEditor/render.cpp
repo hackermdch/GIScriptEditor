@@ -49,7 +49,7 @@ Renderer::Renderer() : background{ PRE_MUL_COLOR(0.6, 0.6, 0.6, 0.8) }, width(12
 	d3d.As(&dxgi);
 	D2D1CreateDevice(dxgi.Get(), {}, &d2d);
 	d2d->CreateDeviceContext({}, &d2d_ctx);
-	DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory8), &dwrite);
+	DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), &dwrite);
 	CreateSystemDefaultTextFormat(dwrite.Get(), &default_format);
 	DCompositionCreateDevice3(nullptr, IID_PPV_ARGS(&dcomp));
 	ComPtr<IDXGIFactory4> factory;

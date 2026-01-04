@@ -105,7 +105,7 @@ export namespace Editor::Render
 		ComPtr<IDXGISwapChain4> swap_chain;
 		ComPtr<IDCompositionDesktopDevice> dcomp;
 		ComPtr<IDCompositionTarget> target;
-		ComPtr<IDWriteFactory8> dwrite;
+		ComPtr<IDWriteFactory> dwrite;
 		ComPtr<IDWriteTextFormat> default_format;
 		HANDLE swap_event;
 		ComPtr<ID3D11BlendState> blend;
@@ -120,7 +120,7 @@ export namespace Editor::Render
 		void Resize(int width, int height);
 
 		ID2D1DeviceContext* D2DCtx() const { return d2d_ctx.Get(); }
-		IDWriteFactory8* DWrite() const { return dwrite.Get(); }
+		IDWriteFactory* DWrite() const { return dwrite.Get(); }
 		IDWriteTextFormat* DefaultFormat() const { return default_format.Get(); }
 		StyleBuilder Style() const { return StyleBuilder{ D2DCtx() }; }
 		float Width() const { return width; }
