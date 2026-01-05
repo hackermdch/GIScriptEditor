@@ -1962,7 +1962,7 @@ private:
 
 	void VisitFunction(const std::string& name, std::optional<Script::VarType> ret, const std::vector<Variable>& parameters) override
 	{
-		if (function_storage.map.contains(name)) throw std::runtime_error(std::format("function '{}' is already defined"));
+		if (function_storage.map.contains(name)) throw std::runtime_error(std::format("function '{}' is already defined", name));
 		function_header.parameters.clear();
 		function_header.in_function = true;
 		if (prev) { x = 0; y += 800; }

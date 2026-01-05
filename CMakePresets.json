@@ -1,0 +1,23 @@
+{
+    "version": 10,
+    "configurePresets": [
+        {
+            "name": "base",
+            "generator": "Visual Studio 17 2022",
+            "binaryDir": "${sourceDir}/cmake-build-vs2022",
+            "architecture": "x64"
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "release",
+            "configurePreset": "base",
+            "configuration": "Release"
+        },
+        {
+            "name": "debug",
+            "configurePreset": "base",
+            "configuration": "Debug"
+        }
+    ]
+}
