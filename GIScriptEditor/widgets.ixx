@@ -103,4 +103,20 @@ export namespace Editor::UI
 
 		void SetClickEvent(decltype(clicked) event) { clicked = std::move(event); }
 	};
+
+	class StaticShape : public Widget
+	{
+	protected:
+		Render::RenderStyle fill, stroke;
+	public:
+		StaticShape(float width, float height);
+		void SetStyle(Render::RenderStyle style, int slot) override;
+	};
+
+	class Rectangle : public StaticShape
+	{
+	public:
+		explicit Rectangle(const Render::Renderer& renderer, float width = 120, float height = 60);
+		void Render(const Render::Renderer& renderer) override;
+	};
 }

@@ -27,7 +27,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	std::wstring pp, sd;
 	Base::Window window("GIScriptEditor");
 	{
-		auto& t = window.AddWidget(std::make_unique<TextBox>(window.Renderer(), L"当前版本：1.0.2", 160));
+		auto& t = window.AddWidget(std::make_unique<TextBox>(window.Renderer(), L"当前版本：1.0.3", 160));
 		t.anchor = Anchor::Top;
 		t.y = 40;
 		t.SetOriginCenter();
@@ -81,6 +81,10 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 			});
 	}
 	{
+		auto& r = window.AddWidget(std::make_unique<UI::Rectangle>(window.Renderer(), 640, 40));
+		r.anchor = Anchor::Center;
+		r.x = -256;
+		r.y = -130;
 		auto& t = window.AddWidget(std::make_unique<TextBox>(window.Renderer(), L"<未选择文件>", 4600));
 		project_path = &t;
 		t.anchor = Anchor::Center;
@@ -89,6 +93,10 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		t.SetTextSize(22);
 	}
 	{
+		auto& r = window.AddWidget(std::make_unique<UI::Rectangle>(window.Renderer(), 640, 40));
+		r.anchor = Anchor::Center;
+		r.x = -256;
+		r.y = -30;
 		auto& t = window.AddWidget(std::make_unique<TextBox>(window.Renderer(), L"<未选择目录>", 4600));
 		script_dir = &t;
 		t.anchor = Anchor::Center;

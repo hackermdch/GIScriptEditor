@@ -257,3 +257,35 @@ void ImageButton::SetStyle(RenderStyle style, int slot)
 {
 	if (slot == 0) overlayer = std::move(style);
 }
+
+StaticShape::StaticShape(float width, float height) : Widget(0, 0, width, height), fill(), stroke()
+{
+}
+
+void StaticShape::SetStyle(RenderStyle style, int slot)
+{
+	switch (slot)
+	{
+	case 0:
+		fill = std::move(style);
+		break;
+	case 1:
+		stroke = std::move(style);
+		break;
+	}
+}
+
+Rectangle::Rectangle(const Renderer& renderer, float width, float height) : StaticShape(width, height)
+{
+	fill = renderer.Style().Color(0.8, 0.8, 0.8, 0.6).Build();
+	stroke = renderer.Style().Color(0.3, 0.3, 0.3, 1).Line(3).Build();
+}
+
+void Rectangle::Render(const Renderer& renderer)
+{
+	auto ctx = renderer.D2DCtx();
+	auto x = CalcX(renderer), y = CalcY(renderer);
+	D2D1_RECT_F collider{ x,y,width,height }, rect{ x,y,x + width,y + height };
+	ctx->FillRectangle(rect, fill.Brush(collider));
+	ctx->DrawRectangle(rect, stroke.Brush(collider), stroke.stroke_width, stroke.Stroke());
+}
