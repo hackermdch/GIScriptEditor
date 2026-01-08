@@ -204,6 +204,8 @@ export namespace Editor::UI
 		float item_offset_y = 0;
 		float scroll_y = 0;
 		float max_scroll_y = 0;
+		float record_x = 0, record_y = 0;
+		bool leaved = true;
 
 		float CalcX(const ListViewItem& w) override;
 		float CalcY(const ListViewItem& w) override;

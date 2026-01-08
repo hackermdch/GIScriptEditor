@@ -417,6 +417,7 @@ ListView::ListView(const Renderer& renderer, float width, float height) : Widget
 
 void ListView::OnMouseLeave()
 {
+	leaved = true;
 	if (!hovered) return;
 	hovered->OnMouseLeave();
 	hovered = nullptr;
@@ -424,6 +425,7 @@ void ListView::OnMouseLeave()
 
 void ListView::OnMouseMove(float x, float y)
 {
+	leaved = false;
 	auto old = hovered;
 	auto hit = true;
 	item_offset_x = 0;
@@ -445,6 +447,8 @@ void ListView::OnMouseMove(float x, float y)
 		item_offset_y += w->height;
 	}
 	if (hit) hovered = nullptr;
+	record_x = x;
+	record_y = y;
 }
 
 void ListView::OnMouseClick(float x, float y)
@@ -466,6 +470,7 @@ void ListView::Render(const Renderer& renderer)
 	max_scroll_y = item_offset_y > height ? item_offset_y - height : 0;
 	if (scroll_y > 0) scroll_y -= scroll_y / 20;
 	if (scroll_y < -max_scroll_y) scroll_y -= (max_scroll_y + scroll_y) / 20;
+	if (!leaved) OnMouseMove(record_x, record_y);
 	auto ctx = renderer.D2DCtx();
 	auto x = Widget::CalcX(), y = Widget::CalcY();
 	item_offset_x = x;

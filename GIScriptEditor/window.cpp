@@ -92,7 +92,9 @@ LRESULT Window::ProcMsg(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		}
 		if (hovered)
 		{
-			auto [px, py] = hovered->TransformLocal(LOWORD(lparam), HIWORD(lparam));
+			POINT pt{ LOWORD(lparam), HIWORD(lparam) };
+			ScreenToClient(hwnd, &pt);
+			auto [px, py] = hovered->TransformLocal(pt.x, pt.y);
 			hovered->OnMouseWheel(px, py, GET_WHEEL_DELTA_WPARAM(wparam) / (float)WHEEL_DELTA);
 		}
 		break;
