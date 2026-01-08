@@ -24,13 +24,59 @@ export namespace Editor::UI
 		RightBottom
 	};
 
+	class Widget;
+
+	class IWidgetContainer
+	{
+		friend Widget;
+		virtual float ICalcX(const Widget& w) = 0;
+		virtual float ICalcY(const Widget& w) = 0;
+	public:
+		virtual ~IWidgetContainer() = 0;
+	};
+
+	template<typename E> requires std::is_base_of_v<Widget, E>
+	class WidgetContainer : public IWidgetContainer
+	{
+		friend Widget;
+
+		float ICalcX(const Widget& w) final { return CalcX((const E&)w); }
+		float ICalcY(const Widget& w) final { return CalcY((const E&)w); }
+	protected:
+		std::deque<std::unique_ptr<E>> widgets;
+
+		virtual float CalcX(const E& w) = 0;
+		virtual float CalcY(const E& w) = 0;
+	public:
+		template<typename T> requires std::is_base_of_v<E, T>
+		T& AddWidget(std::unique_ptr<T> widget)
+		{
+			widget->container = this;
+			return (T&)*widgets.emplace_back(std::move(widget));
+		}
+	};
+
+	class RelativeLayout : public WidgetContainer<Widget>
+	{
+		std::function<float()> width, height;
+
+		float CalcX(const Widget& w) override;
+		float CalcY(const Widget& w) override;
+	public:
+		RelativeLayout(decltype(width) width, decltype(height) height) : width(std::move(width)), height(std::move(height))
+		{
+		}
+	};
+
 	class Widget : public Render::RenderAble
 	{
+		friend WidgetContainer;
+		IWidgetContainer* container = nullptr;
 	protected:
 		bool interactive;
 
-		float CalcX(const Render::Renderer& renderer) const;
-		float CalcY(const Render::Renderer& renderer) const;
+		float CalcX() const;
+		float CalcY() const;
 	public:
 		float x, y;
 		float width, height;
@@ -46,13 +92,14 @@ export namespace Editor::UI
 		Widget(Widget&&) = default;
 		void SetOrigin(float x, float y);
 		void SetOriginCenter();
-		D2D1_POINT_2F TransformLocal(const Render::Renderer& renderer, float x, float y) const;
-		bool HitTest(const Render::Renderer& renderer, float mx, float my) const;
+		D2D1_POINT_2F TransformLocal(float x, float y) const;
+		bool HitTest(float cx, float cy) const;
 		virtual void SetStyle(Render::RenderStyle style, int slot = 0) = 0;
 		virtual void OnMouseEnter() {}
 		virtual void OnMouseLeave() {}
 		virtual void OnMouseMove(float x, float y) {}
 		virtual void OnMouseClick(float x, float y) {}
+		virtual void OnMouseWheel(float x, float y, float delta) {}
 	};
 
 	class Button : public Widget
@@ -140,5 +187,34 @@ export namespace Editor::UI
 		void SetTitle(const Render::Renderer& renderer, const std::wstring& text, float size);
 
 		void SetClickEvent(decltype(clicked) event) { clicked = std::move(event); }
+	};
+
+	class ListViewItem : public Widget
+	{
+	public:
+		ListViewItem(float width, float height) :Widget(0, 0, width, height) {}
+		virtual bool Highlight() { return true; }
+	};
+
+	class ListView : public Widget, public WidgetContainer<ListViewItem>
+	{
+		Render::RenderStyle background, fill, stroke, highlight;
+		Widget* hovered = nullptr;
+		float item_offset_x = 0;
+		float item_offset_y = 0;
+		float scroll_y = 0;
+		float max_scroll_y = 0;
+
+		float CalcX(const ListViewItem& w) override;
+		float CalcY(const ListViewItem& w) override;
+	public:
+		ListView(const Render::Renderer& renderer, float width, float height);
+		void OnMouseLeave() override;
+		void OnMouseMove(float x, float y) override;
+		void OnMouseClick(float x, float y) override;
+		void OnMouseWheel(float x, float y, float delta) override;
+		void Render(const Render::Renderer& renderer) override;
+		void SetStyle(Render::RenderStyle style, int slot) override;
+		void Clear();
 	};
 }

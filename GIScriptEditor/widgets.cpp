@@ -6,44 +6,58 @@ module widgets;
 using namespace Editor::UI;
 using namespace Editor::Render;
 
-float Widget::CalcX(const Renderer& renderer) const
+IWidgetContainer::~IWidgetContainer()
 {
-	switch (anchor)
+}
+
+float RelativeLayout::CalcX(const Widget& w)
+{
+	switch (w.anchor)
 	{
 	case Anchor::LeftTop:
 	case Anchor::Left:
 	case Anchor::LeftBottom:
-		return x - origin.x;
+		return w.x - w.origin.x;
 	case Anchor::Top:
 	case Anchor::Center:
 	case Anchor::Bottom:
-		return x - origin.x + renderer.Width() / 2;
+		return w.x - w.origin.x + width() / 2;
 	case Anchor::RightTop:
 	case Anchor::Right:
 	case Anchor::RightBottom:
-		return x - origin.x + renderer.Width();
+		return w.x - w.origin.x + width();
 	}
 	return 0;
 }
 
-float Widget::CalcY(const Renderer& renderer) const
+float RelativeLayout::CalcY(const Widget& w)
 {
-	switch (anchor)
+	switch (w.anchor)
 	{
 	case Anchor::LeftTop:
 	case Anchor::Top:
 	case Anchor::RightTop:
-		return y - origin.y;
+		return w.y - w.origin.y;
 	case Anchor::Left:
 	case Anchor::Center:
 	case Anchor::Right:
-		return y - origin.y + renderer.Height() / 2;
+		return w.y - w.origin.y + height() / 2;
 	case Anchor::LeftBottom:
 	case Anchor::Bottom:
 	case Anchor::RightBottom:
-		return y - origin.y + renderer.Height();
+		return w.y - w.origin.y + height();
 	}
 	return 0;
+}
+
+float Widget::CalcX() const
+{
+	return container->ICalcX(*this);
+}
+
+float Widget::CalcY() const
+{
+	return container->ICalcY(*this);
 }
 
 Widget::Widget(float x, float y, float width, float height, Anchor anchor) : interactive(true), x(x), y(y), width(width), height(height), anchor(anchor), visible(true), origin()
@@ -62,18 +76,18 @@ void Widget::SetOriginCenter()
 	origin.y = height / 2;
 }
 
-D2D1_POINT_2F Widget::TransformLocal(const Renderer& renderer, float x, float y) const
+D2D1_POINT_2F Widget::TransformLocal(float x, float y) const
 {
-	auto ox = CalcX(renderer), oy = CalcY(renderer);
+	auto ox = CalcX(), oy = CalcY();
 	return { x - ox ,y - oy };
 }
 
-bool Widget::HitTest(const Renderer& renderer, float mx, float my) const
+bool Widget::HitTest(float cx, float cy) const
 {
 	if (!interactive) return false;
-	auto x = CalcX(renderer), y = CalcY(renderer);
+	auto x = CalcX(), y = CalcY();
 	D2D1_RECT_F rect{ x,y,x + width,y + height };
-	return rect.left <= mx && mx <= rect.right && rect.top <= my && my <= rect.bottom;
+	return rect.left <= cx && cx <= rect.right && rect.top <= cy && cy <= rect.bottom;
 }
 
 Button::Button(const Renderer& renderer, const std::wstring& text, float width, float height) : Widget(0, 0, width, height)
@@ -89,8 +103,8 @@ Button::Button(const Renderer& renderer, const std::wstring& text, float width, 
 void Button::Render(const Renderer& renderer)
 {
 	auto ctx = renderer.D2DCtx();
-	auto x = CalcX(renderer), y = CalcY(renderer);
-	D2D1_RECT_F collider{ x,y,width,height };
+	auto x = CalcX(), y = CalcY();
+	D2D1_RECT_F collider{ x,y,x + width,y + height };
 	D2D1_ROUNDED_RECT rect{ x ,y,x + width,y + height,3,3 };
 	DWRITE_TEXT_METRICS metrics;
 	text->GetMetrics(&metrics);
@@ -184,8 +198,8 @@ static void DrawTextOutline(ID2D1DeviceContext* ctx, ID2D1BitmapRenderTarget* la
 void TextBox::Render(const Renderer& renderer)
 {
 	auto ctx = renderer.D2DCtx();
-	auto x = CalcX(renderer), y = CalcY(renderer);
-	D2D1_RECT_F collider{ x,y,width,height };
+	auto x = CalcX(), y = CalcY();
+	D2D1_RECT_F collider{ x,y,x + width,y + height };
 	if (dirty)
 	{
 		DWRITE_TEXT_METRICS metrics;
@@ -233,7 +247,7 @@ ImageButton::ImageButton(const Renderer& renderer, ComPtr<ID2D1Image> image, flo
 void ImageButton::Render(const Renderer& renderer)
 {
 	auto ctx = renderer.D2DCtx();
-	auto x = CalcX(renderer), y = CalcY(renderer);
+	auto x = CalcX(), y = CalcY();
 	ctx->DrawImage(source.Get(), { x,y });
 	if (hovered) ctx->FillRectangle({ x,y,x + width,y + height }, overlayer.Brush({ x,y,width,height }));
 }
@@ -285,10 +299,10 @@ Rectangle::Rectangle(const Renderer& renderer, float width, float height) : Stat
 void Rectangle::Render(const Renderer& renderer)
 {
 	auto ctx = renderer.D2DCtx();
-	auto x = CalcX(renderer), y = CalcY(renderer);
-	D2D1_RECT_F collider{ x,y,width,height }, rect{ x,y,x + width,y + height };
-	ctx->FillRectangle(rect, fill.Brush(collider));
-	ctx->DrawRectangle(rect, stroke.Brush(collider), stroke.stroke_width, stroke.Stroke());
+	auto x = CalcX(), y = CalcY();
+	D2D1_RECT_F rect{ x,y,x + width,y + height };
+	ctx->FillRectangle(rect, fill.Brush(rect));
+	ctx->DrawRectangle(rect, stroke.Brush(rect), stroke.stroke_width, stroke.Stroke());
 }
 
 static std::vector<ComPtr<IDWriteTextLayout>> MakePopItems(const Renderer& renderer, const std::vector<std::wstring>& items)
@@ -310,26 +324,26 @@ PopMenu::PopMenu(const Renderer& renderer, const std::vector<std::wstring>& item
 void PopMenu::Render(const Renderer& renderer)
 {
 	auto ctx = renderer.D2DCtx();
-	auto x = CalcX(renderer), y = CalcY(renderer);
+	auto x = CalcX(), y = CalcY();
 	auto y1 = y;
 	int i = 0;
 	if (title)
 	{
 		DWRITE_TEXT_METRICS metrics;
 		title->GetMetrics(&metrics);
-		D2D1_RECT_F collider{ x,y - metrics.height,item_width,metrics.height };
+		D2D1_RECT_F collider{ x,y - metrics.height,x + item_width,y };
 		D2D1_POINT_2F p{ x + (item_width - metrics.width) / 2, y - metrics.height };
 		ctx->DrawTextLayout(p, title.Get(), fill.Brush(collider));
 	}
 	for (auto& it : items)
 	{
-		D2D1_RECT_F collider{ x,y1,item_width,item_height }, rect{ x,y1,x + item_width,y1 + item_height };
-		ctx->FillRectangle(rect, i == hovered ? highlight.Brush(collider) : background.Brush(collider));
-		ctx->DrawRectangle(rect, stroke.Brush(collider), stroke.stroke_width, stroke.Stroke());
+		D2D1_RECT_F rect{ x,y1,x + item_width,y1 + item_height };
+		ctx->FillRectangle(rect, i == hovered ? highlight.Brush(rect) : background.Brush(rect));
+		ctx->DrawRectangle(rect, stroke.Brush(rect), stroke.stroke_width, stroke.Stroke());
 		DWRITE_TEXT_METRICS metrics;
 		it->GetMetrics(&metrics);
 		D2D1_POINT_2F p{ x + (item_width - metrics.width) / 2, y1 + (item_height - metrics.height) / 2 };
-		ctx->DrawTextLayout(p, it.Get(), fill.Brush(collider));
+		ctx->DrawTextLayout(p, it.Get(), fill.Brush(rect));
 		y1 += item_height;
 		i++;
 	}
@@ -360,10 +374,142 @@ void PopMenu::SetTextSize(float size) const
 
 void PopMenu::SetStyle(RenderStyle style, int slot)
 {
+	switch (slot)
+	{
+	case 0:
+		background = std::move(style);
+		break;
+	case 1:
+		fill = std::move(style);
+		break;
+	case 2:
+		stroke = std::move(style);
+		break;
+	case 3:
+		highlight = std::move(style);
+		break;
+	}
 }
 
 void PopMenu::SetTitle(const Renderer& renderer, const std::wstring& text, float size)
 {
 	renderer.DWrite()->CreateTextLayout(text.data(), text.size(), renderer.DefaultFormat(), 4600, 40, &title);
 	title->SetFontSize(size, { 0,~0u });
+}
+
+float ListView::CalcX(const ListViewItem& w)
+{
+	return item_offset_x;
+}
+
+float ListView::CalcY(const ListViewItem& w)
+{
+	return item_offset_y;
+}
+
+ListView::ListView(const Renderer& renderer, float width, float height) : Widget(0, 0, width, height)
+{
+	background = renderer.Style().Color(0.8, 0.8, 0.8, 0.6).Build();
+	fill = renderer.Style().Color(0, 0, 0, 1).Build();
+	stroke = renderer.Style().Color(0.3, 0.3, 0.3, 1).Line(3).Build();
+	highlight = renderer.Style().Color(0.6, 1, 1, 0.5).Build();
+}
+
+void ListView::OnMouseLeave()
+{
+	if (!hovered) return;
+	hovered->OnMouseLeave();
+	hovered = nullptr;
+}
+
+void ListView::OnMouseMove(float x, float y)
+{
+	auto old = hovered;
+	auto hit = true;
+	item_offset_x = 0;
+	item_offset_y = scroll_y;
+	for (auto& w : widgets)
+	{
+		if (hit && w->visible && w->HitTest(x, y))
+		{
+			hit = false;
+			if (hovered != w.get())
+			{
+				hovered = w.get();
+				w->OnMouseEnter();
+			}
+			auto [px, py] = w->TransformLocal(x, y);
+			w->OnMouseMove(px, py);
+		}
+		else if (old == w.get()) w->OnMouseLeave();
+		item_offset_y += w->height;
+	}
+	if (hit) hovered = nullptr;
+}
+
+void ListView::OnMouseClick(float x, float y)
+{
+	if (!hovered) return;
+	auto [px, py] = hovered->TransformLocal(x, y);
+	hovered->OnMouseClick(px, py);
+}
+
+void ListView::OnMouseWheel(float x, float y, float delta)
+{
+	scroll_y += delta * 20;
+}
+
+void ListView::Render(const Renderer& renderer)
+{
+	item_offset_y = 0;
+	for (auto& w : widgets) item_offset_y += w->height;
+	max_scroll_y = item_offset_y > height ? item_offset_y - height : 0;
+	if (scroll_y > 0) scroll_y -= scroll_y / 20;
+	if (scroll_y < -max_scroll_y) scroll_y -= (max_scroll_y + scroll_y) / 20;
+	auto ctx = renderer.D2DCtx();
+	auto x = Widget::CalcX(), y = Widget::CalcY();
+	item_offset_x = x;
+	item_offset_y = y + scroll_y;
+	D2D1_RECT_F rect{ x,y,x + width,y + height };
+	ctx->FillRectangle(rect, background.Brush(rect));
+	ctx->DrawRectangle(rect, stroke.Brush(rect), stroke.stroke_width, stroke.Stroke());
+	rect.top += 2;
+	rect.bottom -= 2;
+	ctx->PushAxisAlignedClip(rect, D2D1_ANTIALIAS_MODE_ALIASED);
+	for (auto& w : widgets)
+	{
+		auto bottom = item_offset_y + w->height;
+		if (bottom > y + height) bottom = y + height;
+		D2D1_RECT_F clip{ x,item_offset_y,x + width, bottom };
+		ctx->PushAxisAlignedClip(clip, D2D1_ANTIALIAS_MODE_ALIASED);
+		w->Render(renderer);
+		if (w.get() == hovered && w->Highlight()) ctx->FillRectangle(clip, highlight.Brush(clip));
+		ctx->PopAxisAlignedClip();
+		item_offset_y += w->height;
+	}
+	ctx->PopAxisAlignedClip();
+}
+
+void ListView::SetStyle(RenderStyle style, int slot)
+{
+	switch (slot)
+	{
+	case 0:
+		background = std::move(style);
+		break;
+	case 1:
+		fill = std::move(style);
+		break;
+	case 2:
+		stroke = std::move(style);
+		break;
+	case 3:
+		highlight = std::move(style);
+		break;
+	}
+}
+
+void ListView::Clear()
+{
+	widgets.clear();
 }

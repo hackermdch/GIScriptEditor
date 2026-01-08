@@ -9,12 +9,11 @@ import widgets;
 
 export namespace Editor::Base
 {
-	class Window
+	class Window : public UI::RelativeLayout
 	{
 		HWND handle;
 		bool standalone_window = false;
 		Render::Renderer renderer;
-		std::deque<std::unique_ptr<UI::Widget>> widgets;
 		UI::Widget* hovered = nullptr;
 		UI::Widget* pop_widget = nullptr;
 		Window* joined = nullptr;
@@ -23,7 +22,7 @@ export namespace Editor::Base
 		LRESULT ProcMsg(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 	public:
 		explicit Window(const std::wstring& title);
-		virtual ~Window();
+		~Window() override;
 		int Run();
 		void Join(Window* parent);
 		Utils::Future<void> Dialog(const std::wstring& title, const std::wstring& msg, UINT type) const;
@@ -33,11 +32,5 @@ export namespace Editor::Base
 
 		const Render::Renderer& Renderer() const { return renderer; }
 		void SetPop(UI::Widget& widget) { pop_widget = &widget; widget.visible = true; }
-
-		template<typename T> requires std::is_base_of_v<UI::Widget, T>
-		T& AddWidget(std::unique_ptr<T> widget)
-		{
-			return (T&)*widgets.emplace_back(std::move(widget));
-		}
 	};
 }

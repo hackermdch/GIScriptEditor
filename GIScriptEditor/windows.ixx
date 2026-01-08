@@ -19,6 +19,7 @@ export namespace Editor::App
 
 	class FindReferenceWindow : public Base::Window
 	{
+		UI::ListView* list;
 	public:
 		FindReferenceWindow();
 	};

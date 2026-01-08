@@ -56,7 +56,7 @@ LRESULT Window::ProcMsg(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		auto hit = true;
 		for (auto& w : widgets | std::views::reverse)
 		{
-			if (hit && w->visible && w->HitTest(renderer, x, y))
+			if (hit && w->visible && w->HitTest(x, y))
 			{
 				hit = false;
 				if (hovered != w.get())
@@ -64,7 +64,7 @@ LRESULT Window::ProcMsg(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					hovered = w.get();
 					w->OnMouseEnter();
 				}
-				auto [px, py] = w->TransformLocal(renderer, x, y);
+				auto [px, py] = w->TransformLocal(x, y);
 				w->OnMouseMove(px, py);
 			}
 			else if (old == w.get()) w->OnMouseLeave();
@@ -80,8 +80,20 @@ LRESULT Window::ProcMsg(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		}
 		if (hovered)
 		{
-			auto [px, py] = hovered->TransformLocal(renderer, LOWORD(lparam), HIWORD(lparam));
+			auto [px, py] = hovered->TransformLocal(LOWORD(lparam), HIWORD(lparam));
 			hovered->OnMouseClick(px, py);
+		}
+		break;
+	case WM_MOUSEWHEEL:
+		if (pop_widget && hovered != pop_widget)
+		{
+			pop_widget->visible = false;
+			pop_widget = nullptr;
+		}
+		if (hovered)
+		{
+			auto [px, py] = hovered->TransformLocal(LOWORD(lparam), HIWORD(lparam));
+			hovered->OnMouseWheel(px, py, GET_WHEEL_DELTA_WPARAM(wparam) / (float)WHEEL_DELTA);
 		}
 		break;
 	default: break;
@@ -90,6 +102,7 @@ LRESULT Window::ProcMsg(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 }
 
 Window::Window(const std::wstring& title) :
+	RelativeLayout([&r = renderer] { return r.Width(); }, [&r = renderer] { return r.Height(); }),
 	handle(CreateWindowExW(WS_EX_NOREDIRECTIONBITMAP, L"AppWindow", title.data(), WS_OVERLAPPEDWINDOW, 100, 100, 1280, 720, nullptr, nullptr, nullptr, nullptr)),
 	message([this](HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) { return ProcMsg(hwnd, msg, wparam, lparam); })
 {

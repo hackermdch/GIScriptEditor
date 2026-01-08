@@ -72,6 +72,12 @@
     <ClCompile Include="find_reference_window.cpp">
       <Filter>源文件\app</Filter>
     </ClCompile>
+    <ClCompile Include="custom_widgets.ixx">
+      <Filter>源文件\app</Filter>
+    </ClCompile>
+    <ClCompile Include="node_reference_item.cpp">
+      <Filter>源文件\app</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="1.png">

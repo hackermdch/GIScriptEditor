@@ -21,7 +21,7 @@ export namespace Editor::Render
 
 		ID2D1Brush* Brush(const D2D1_RECT_F& rect) const
 		{
-			if (need_transform) brush->SetTransform(D2D1::Matrix3x2F::Scale(rect.right, rect.bottom) * D2D1::Matrix3x2F::Translation(rect.left, rect.top));
+			if (need_transform) brush->SetTransform(D2D1::Matrix3x2F::Scale(rect.right - rect.left, rect.bottom - rect.top) * D2D1::Matrix3x2F::Translation(rect.left, rect.top));
 			return brush.Get();
 		}
 
@@ -125,6 +125,15 @@ export namespace Editor::Render
 		StyleBuilder Style() const { return StyleBuilder{ D2DCtx() }; }
 		float Width() const { return width; }
 		float Height() const { return height; }
+
+		ComPtr<ID2D1PathGeometry> PathGeometry() const
+		{
+			ComPtr<ID2D1PathGeometry> pg;
+			ComPtr<ID2D1Factory> factory;
+			d2d_ctx->GetFactory(&factory);
+			factory->CreatePathGeometry(&pg);
+			return pg;
+		}
 	};
 
 	struct RenderAble
