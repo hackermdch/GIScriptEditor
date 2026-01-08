@@ -66,6 +66,7 @@ export namespace Ugc::Script
 
 	class BlockNode : public StatementNode
 	{
+		friend FunctionNode;
 		std::vector<std::unique_ptr<StatementNode>> statements;
 	public:
 		explicit BlockNode(std::vector<std::unique_ptr<StatementNode>> statements);

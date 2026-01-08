@@ -2227,6 +2227,7 @@ private:
 			n->SetComment(p.Id());
 			auto& sn = graph.AddNode(NodeFactory::SetLocalVariable(graph, p.Type()));
 			AutoLayout(&sn);
+			n->Connect(sn, 0, 0);
 			DefinePin(sn, p.Type(), 1, true, false);
 			graph.SetCompositePin(sn, PinType::Input, 1, pin);
 			graph.SetCompositePinName(PinType::Input, pin++, p.Id());
@@ -2425,6 +2426,12 @@ private:
 			ctx.branch = &br;
 			ctx.merge = prev;
 			value = ctx;
+			if (expr->flowStart)
+			{
+				prev->Connect(*expr->flowStart, flow, 0, true);
+				prev = expr->flowEnd;
+				flow = 0;
+			}
 			prev->Connect(br, flow, 0, true);
 			if (expr->end) expr->end->Connect(br, expr->pin, 0);
 			else br.Set(0, Enum{ (unsigned)std::get<int64_t>(expr->literal) }, ServerVarType::Boolean);
@@ -2499,6 +2506,12 @@ private:
 		ctx.index = 0;
 		ctx.type = expr->retType.type;
 		value = ctx;
+		if (expr->flowStart)
+		{
+			prev->Connect(*expr->flowStart, flow, 0, true);
+			prev = expr->flowEnd;
+			flow = 0;
+		}
 		prev->Connect(br, flow, 0, true);
 		if (expr->end) expr->end->Connect(br, expr->pin, 0);
 		else switch (expr->retType.type)
@@ -2611,7 +2624,12 @@ private:
 			auto& br = graph.AddNode(DoubleBranch);
 			expr->Add(graph, layout());
 			AutoLayout(&br);
-			loop.Connect(br);
+			if (expr->flowStart)
+			{
+				loop.Connect(*expr->flowStart);
+				expr->flowEnd->Connect(br);
+			}
+			else loop.Connect(br);
 			if (expr->end) expr->end->Connect(br, expr->pin, 0);
 			else br.Set(0, Enum{ (unsigned)std::get<int64_t>(expr->literal) }, ServerVarType::Boolean);
 			value = LoopContext{ &loop,&br,current_loop };
@@ -2635,6 +2653,12 @@ private:
 		auto& loop = graph.AddNode(ListIterationLoopInt);
 		iterable->Add(graph, layout());
 		AutoLayout(&loop);
+		if (iterable->flowStart)
+		{
+			prev->Connect(*iterable->flowStart, flow, 0, true);
+			prev = iterable->flowEnd;
+			flow = 0;
+		}
 		prev->Connect(loop, flow, 0, true);
 		iterable->end->Connect(loop, iterable->pin, 0);
 		scope.add(var, std::make_unique<LocalVar>(type, VarContent{ &loop,true }));
@@ -3251,6 +3275,11 @@ private:
 		AutoLayout(&n);
 		r->Connect(n, 0, 0);
 		v->end->Connect(n, v->pin, 1);
+		if (v->flowStart)
+		{
+			prev->Connect(*v->flowStart, flow, 0, true);
+			prev = v->flowEnd;
+		}
 		prev->Connect(n);
 		prev = &n;
 	}
@@ -3279,24 +3308,29 @@ void Compiler::AddModule(const std::string& name, const std::string& code)
 
 void Compiler::Compile()
 {
+	std::vector<std::function<void()>> actions;
 	for (auto& [graph, ast] : symbol_modules)
 	{
 		auto& f = *(FunctionNode*)ast.get();
-		NodeGenerator g(*graph, *this);
-		g.scope.enter();
-		g.VisitGlobalFunction(f.Name(), f.Ret(), f.Parameters());
-		f.VisitBody(g);
-		g.scope.exit();
-		auto ex = g.prev;
-		if (g.flow != 0)
-		{
-			ex = &graph->AddNode(NodeId::DoubleBranch);
-			ex->Set(0, Enum{ 1 }, ServerVarType::Boolean);
-			ex->SetComment("Dummy ExitPoint");
-			g.AutoLayout(ex);
-		}
-		graph->SetCompositePin(*ex, PinType::Outflow, 0, 0);
+		auto g = std::make_shared<NodeGenerator>(*graph, *this);
+		g->scope.enter();
+		g->VisitGlobalFunction(f.Name(), f.Ret(), f.Parameters());
+		actions.emplace_back([&f, g, graph = graph.get()] mutable
+			{
+				f.VisitBody(*g);
+				g->scope.exit();
+				auto ex = g->prev;
+				if (g->flow != 0)
+				{
+					ex = &graph->AddNode(NodeId::DoubleBranch);
+					ex->Set(0, Enum{ 1 }, ServerVarType::Boolean);
+					ex->SetComment("Dummy ExitPoint");
+					g->AutoLayout(ex);
+				}
+				graph->SetCompositePin(*ex, PinType::Outflow, 0, 0);
+			});
 	}
+	for (auto& a : actions) a();
 	for (auto& [graph, ast] : modules)
 	{
 		NodeGenerator g(*graph, *this);

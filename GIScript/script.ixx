@@ -11,8 +11,6 @@ export namespace GI::Script
 	{
 		std::vector<std::unique_ptr<Ugc::Script::DeclarationNode>> declarations;
 		std::vector<std::unique_ptr<Ugc::Script::FunctionNode>> global_functions;
-		antlr4::Token* func_end;
-		antlr4::CommonTokenStream& tokens;
 
 		std::any visitEvent(GIScriptParser::EventContext* context) override;
 		std::any visitFunction(GIScriptParser::FunctionContext* context) override;
@@ -57,7 +55,7 @@ export namespace GI::Script
 		std::any visitInitializer(GIScriptParser::InitializerContext* context) override;
 		std::any visitInitializerList(GIScriptParser::InitializerListContext* context) override;
 	public:
-		Parser(antlr4::CommonTokenStream& tokens);
+		Parser();
 		std::unique_ptr<Ugc::Script::ASTNode> Release();
 	};
 }

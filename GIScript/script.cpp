@@ -85,7 +85,6 @@ static std::string MakeString(const std::string& text)
 std::any Parser::visitEvent(GIScriptParser::EventContext* context)
 {
 	std::vector<Variable> parameters;
-	func_end = nullptr;
 	if (context->parameterList())
 	{
 		for (auto p : context->parameterList()->parameter())
@@ -101,7 +100,6 @@ std::any Parser::visitFunction(GIScriptParser::FunctionContext* context)
 {
 	std::vector<Variable> parameters;
 	std::optional<VarType> ret;
-	func_end = context->getStop();
 	if (context->functionSign()->type()) ret = MakeType(context->functionSign()->type());
 	if (context->functionSign()->parameterList())
 	{
@@ -206,16 +204,8 @@ std::any Parser::visitForEach(GIScriptParser::ForEachContext* context)
 
 std::any Parser::visitReturn(GIScriptParser::ReturnContext* context)
 {
-	if (func_end)
-	{
-		auto i = context->getStart()->getTokenIndex() - 1;
-		if (auto prev = tokens.get(i)->getText(); (prev == ";" || prev == "}") && tokens.get(context->getStop()->getTokenIndex() + 2) == func_end)
-		{
-			if (context->expr()) return Wrap(new Return(MakeUnique<ExpressionNode>(visit(context->expr()))));
-			return Wrap(new Return());
-		}
-	}
-	throw std::runtime_error("Return must be the last statement in the function");
+	if (context->expr()) return Wrap(new Return(MakeUnique<ExpressionNode>(visit(context->expr()))));
+	return Wrap(new Return());
 }
 
 std::any Parser::visitIntegerLiteral(GIScriptParser::IntegerLiteralContext* context)
@@ -493,7 +483,7 @@ std::any Parser::visitInitializerList(GIScriptParser::InitializerListContext* co
 	return Wrap(new InitializerList(std::move(inits)));
 }
 
-Parser::Parser(antlr4::CommonTokenStream& tokens) : func_end(nullptr), tokens(tokens)
+Parser::Parser()
 {
 }
 

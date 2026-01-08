@@ -49,10 +49,33 @@ Variable::Variable(const std::string& id, VarType type, std::unique_ptr<Expressi
 
 EventNode::EventNode(const std::string& event, std::vector<Variable> parameters, BlockNode body) : event(event), parameters(std::move(parameters)), body(std::move(body))
 {
+	struct Checker : ASTVisitor
+	{
+		void VisitReturn(const std::any& value) override
+		{
+			throw std::runtime_error("Return must be the last statement in the function");
+		}
+	} checker;
+	this->body.Visit(checker);
 }
 
 FunctionNode::FunctionNode(const std::string& name, std::optional<VarType> ret, std::vector<Variable> parameters, BlockNode body) : name(name), parameters(std::move(parameters)), ret(std::move(ret)), body(std::move(body))
 {
+	struct Checker : ASTVisitor
+	{
+		void VisitReturn(const std::any& value) override
+		{
+			throw std::runtime_error("Return must be the last statement in the function");
+		}
+	} checker;
+	for (auto& s : this->body.statements)
+	{
+		if (typeid(*s) == typeid(Return))
+		{
+			if (s != this->body.statements.back()) throw std::runtime_error("Return must be the last statement in the function");
+		}
+		else s->Visit(checker);
+	}
 }
 
 Return::Return(std::unique_ptr<ExpressionNode> expr) : expr(std::move(expr))
@@ -211,7 +234,7 @@ std::unique_ptr<ASTNode> Ugc::Script::Parse(const std::string& code)
 	FastFailListener l;
 	lexer.addErrorListener(&l);
 	parser.addErrorListener(&l);
-	GI::Script::Parser p(tokens);
+	GI::Script::Parser p;
 	p.visitProgram(parser.program());
 	if (auto t = tokens.LT(1); t->getType() != antlr4::Token::EOF) throw std::runtime_error(std::format("Unexpected token '{}' at line {}:{}.", t->getText(), t->getLine(), t->getCharPositionInLine()));
 	return p.Release();
