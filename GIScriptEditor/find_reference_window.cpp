@@ -1,5 +1,4 @@
 ﻿module;
-#include <Windows.h>
 #include <GINodeGraph.h>
 module app.window;
 

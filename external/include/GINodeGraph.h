@@ -3648,6 +3648,7 @@ namespace Ugc::NodeGraph
 		{
 			std::string name;
 			bool composite;
+			std::vector<uint32_t> ids;
 		};
 
 		std::vector<Referenced> referenced;

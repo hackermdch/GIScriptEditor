@@ -160,7 +160,10 @@
       <ExceptionHandling Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Async</ExceptionHandling>
       <ExceptionHandling Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Async</ExceptionHandling>
     </ClCompile>
-    <ClCompile Include="main_window.cpp" />
+    <ClCompile Include="main_window.cpp">
+      <ExceptionHandling Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Async</ExceptionHandling>
+      <ExceptionHandling Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Async</ExceptionHandling>
+    </ClCompile>
     <ClCompile Include="node_reference_item.cpp" />
     <ClCompile Include="render.cpp" />
     <ClCompile Include="render.ixx" />

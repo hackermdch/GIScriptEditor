@@ -23,6 +23,39 @@ namespace Ugc
 
 	struct INode
 	{
+		struct Iterator
+		{
+			virtual Iterator& operator++() = 0;
+			virtual INode& operator*() const = 0;
+			virtual bool operator==(const Iterator& other) const = 0;
+			virtual ~Iterator() = 0;
+		};
+
+		class IteratorWrapper
+		{
+			std::unique_ptr<Iterator> iterator;
+		public:
+			IteratorWrapper(std::unique_ptr<Iterator> iterator) : iterator(std::move(iterator)) {}
+
+			IteratorWrapper& operator++()
+			{
+				++*iterator;
+				return *this;
+			}
+
+			INode& operator*()
+			{
+				return **iterator;
+			}
+
+			const INode& operator*() const
+			{
+				return **iterator;
+			}
+
+			bool operator==(const IteratorWrapper& other) const { return *iterator == *other.iterator; }
+		};
+
 		virtual uint32_t Id() const = 0;
 		virtual std::string Name() const = 0;
 		virtual NodeType Type() const = 0;
@@ -58,6 +91,8 @@ namespace Ugc
 		virtual operator std::string() const = 0;
 		virtual operator std::vector<uint8_t>() const = 0;
 		virtual operator std::vector<uint64_t>() const = 0;
+		virtual IteratorWrapper begin() = 0;
+		virtual IteratorWrapper end() = 0;
 
 		template<NodeType T>
 		auto Get() const

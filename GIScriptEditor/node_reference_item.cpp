@@ -20,15 +20,20 @@ NodeReferenceItem::NodeReferenceItem(const Render::Renderer& renderer, NodeRefer
 {
 	auto ws = Utils::ToUtf16(reference.name);
 	renderer.DWrite()->CreateTextLayout(ws.data(), ws.size(), renderer.DefaultFormat(), 4600, 40, &name);
-	for (auto& [name, composite] : reference.referenced)
+	for (auto& [name, composite, ids] : reference.referenced)
 	{
-		auto& [n, c] = referenced.emplace_back();
-		auto str = Utils::ToUtf16(name);
-		renderer.DWrite()->CreateTextLayout(str.data(), str.size(), renderer.DefaultFormat(), 4600, 40, &n);
-		n->SetFontSize(26, { 0,~0u });
-		c = composite;
+		auto& r = referenced.emplace_back();
+		auto str = Utils::ToUtf16(name), str2 = std::to_wstring(ids.size());
+		renderer.DWrite()->CreateTextLayout(str.data(), str.size(), renderer.DefaultFormat(), 4600, 40, &r.name);
+		renderer.DWrite()->CreateTextLayout(str2.data(), str2.size(), renderer.DefaultFormat(), 120, 40, &r.count);
+		r.name->SetFontSize(26, { 0,~0u });
+		r.count->SetFontSize(26, { 0,~0u });
+		r.composite = composite;
+		r.referenced_ids = std::move(ids);
 	}
-	ws = std::to_wstring(referenced.size());
+	auto c = 0;
+	for (auto& r : referenced) c += r.referenced_ids.size();
+	ws = std::to_wstring(c);
 	renderer.DWrite()->CreateTextLayout(ws.data(), ws.size(), renderer.DefaultFormat(), 120, 40, &count);
 	name->SetFontSize(26, { 0,~0u });
 	count->SetFontSize(26, { 0,~0u });
@@ -39,6 +44,7 @@ NodeReferenceItem::NodeReferenceItem(const Render::Renderer& renderer, NodeRefer
 	button_fill = renderer.Style().Color(0.8, 0.8, 0.8, 1).Build();
 	button_stroke = renderer.Style().Color(0.3, 0.3, 0.3, 1).Build();
 	button_highlight = renderer.Style().Color(0.8, 0.8, 0.3, 1).Build();
+	other = renderer.Style().Color(1, 1, 0.5, 1).Build();
 	button1 = renderer.PathGeometry();
 	button2 = renderer.PathGeometry();
 	ComPtr<ID2D1GeometrySink> sink;
@@ -91,7 +97,11 @@ void NodeReferenceItem::Render(const Render::Renderer& renderer)
 	auto x = CalcX(), y = CalcY();
 	D2D1_RECT_F collider{ x,y,x + width, y + 40 };
 	ctx->DrawTextLayout({ x + 5,y }, name.Get(), composite.Brush(collider));
-	ctx->DrawTextLayout({ x + width - 120,y }, count.Get(), misc.Brush(collider));
+	{
+		DWRITE_TEXT_METRICS metrics;
+		count->GetMetrics(&metrics);
+		ctx->DrawTextLayout({ x + width - 120 - metrics.width,y }, count.Get(), misc.Brush(collider));
+	}
 	if (!referenced.empty())
 	{
 		D2D1_MATRIX_3X2_F old;
@@ -124,8 +134,9 @@ void NodeReferenceItem::Render(const Render::Renderer& renderer)
 		collider.bottom = y1 + 40;
 		DWRITE_TEXT_METRICS metrics;
 		r.name->GetMetrics(&metrics);
-		if (r.composite) ctx->DrawTextLayout({ x + width - metrics.width - 80,y1 }, r.name.Get(), composite.Brush(collider));
-		else ctx->DrawTextLayout({ x + width - metrics.width - 80,y1 }, r.name.Get(), normal.Brush(collider));
+		if (r.composite) ctx->DrawTextLayout({ x + width - metrics.width - 100,y1 }, r.name.Get(), composite.Brush(collider));
+		else ctx->DrawTextLayout({ x + width - metrics.width - 100,y1 }, r.name.Get(), normal.Brush(collider));
+		ctx->DrawTextLayout({ x + width - 60 ,y1 }, r.count.Get(), other.Brush(collider));
 		y1 += 40;
 	}
 }

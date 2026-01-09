@@ -22,7 +22,7 @@ static auto LoadScript(const std::filesystem::path& path)
 MainWindow::MainWindow() : Window(L"GIScriptEditor")
 {
 	{
-		auto& t = AddWidget(std::make_unique<TextBox>(Renderer(), L"当前版本：1.1.0", 160));
+		auto& t = AddWidget(std::make_unique<TextBox>(Renderer(), L"当前版本：1.1.1", 160));
 		t.anchor = Anchor::Top;
 		t.y = 40;
 		t.SetOriginCenter();
@@ -116,6 +116,7 @@ MainWindow::MainWindow() : Window(L"GIScriptEditor")
 				{
 					if (!std::filesystem::exists(pp)) throw std::runtime_error("Project file not exists");
 					if (!(std::filesystem::exists(sd) && std::filesystem::is_directory(sd))) throw std::runtime_error("Script directory not exists");
+					auto start = std::chrono::high_resolution_clock::now();
 					Tools::Compiler compiler(Ugc::NodeGraph::LoadProject(pp));
 					int count = 0;
 					for (auto& entry : std::filesystem::directory_iterator(sd))
@@ -128,7 +129,9 @@ MainWindow::MainWindow() : Window(L"GIScriptEditor")
 					compiler.Compile();
 					compiler.Write();
 					compiler.Release()->Save(pp);
-					co_await Dialog(L"提示", std::format(L"写入完成。共编译 {} 个文件。", count), MB_ICONINFORMATION);
+					auto end = std::chrono::high_resolution_clock::now();
+					auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+					co_await Dialog(L"提示", std::format(L"写入完成。共编译 {} 个文件。耗时 {}", count, duration_ms), MB_ICONINFORMATION);
 					lock = false;
 					co_return;
 				}

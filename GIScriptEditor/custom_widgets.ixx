@@ -22,11 +22,13 @@ export namespace Editor::App
 		struct Referenced
 		{
 			ComPtr<IDWriteTextLayout> name;
+			ComPtr<IDWriteTextLayout> count;
 			bool composite;
+			std::vector<uint32_t> referenced_ids;
 		};
 
 		std::vector<Referenced> referenced;
-		Render::RenderStyle normal, composite, misc, button_fill, button_stroke, button_highlight;
+		Render::RenderStyle normal, composite, misc, button_fill, button_stroke, button_highlight, other;
 		float expand_height;
 		bool expand = false, button_hovered = false;
 	public:
